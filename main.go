@@ -410,7 +410,7 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
                     </div>
                     <div class="info-row">
                         <span class="info-label">Pod IP</span>
-                        <span class="info-value">{{.IP}}</span>
+                        <span class="info-value"><a href="http://{{.IP}}:8080" target="_self" style="color: #00d4ff; text-decoration: none; border-bottom: 1px dotted #00d4ff;">{{.IP}}</a></span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Node</span>

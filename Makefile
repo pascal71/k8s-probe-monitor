@@ -8,7 +8,7 @@ KO_DOCKER_REPO ?= quay.io/pamvdam
 # Version information
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-BUILD_TIME ?= $(shell date -u '+%Y-%m-%d_%H:%M:%S')
+BUILD_TIME ?= $(shell date -u +%Y-%m-%d_%H:%M:%S)
 
 # Export for Ko
 export KO_DOCKER_REPO
@@ -18,7 +18,7 @@ export BUILD_TIME
 
 .PHONY: help
 help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $1, $2}'
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | while IFS=':' read -r target desc; do printf '\033[36m%-20s\033[0m %s\n' "$${target}" "$${desc##*## }"; done
 
 .PHONY: install-ko
 install-ko: ## Install Ko if not present
