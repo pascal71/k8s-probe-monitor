@@ -1,0 +1,6 @@
+export KO_DOCKER_REPO=quay.io/pamvdam/k8s-probes
+
+# Create project
+
+# Deploy to Kubernetes
+ko apply --platform=linux/amd64,linux/arm64 -f deploy-k8s-probes.yaml
