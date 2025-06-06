@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,13 +45,14 @@ type ProbeStatus struct {
 }
 
 type PodStatusInfo struct {
-	Name      string
-	IP        string
-	Node      string
-	Status    string
-	Info      *PodInfo
-	Error     string
-	LastCheck time.Time
+	Name         string
+	IP           string
+	Node         string
+	Status       string
+	Info         *PodInfo
+	Error        string
+	LastCheck    time.Time
+	ReplicaSetID string
 }
 
 type Dashboard struct {
@@ -126,12 +128,21 @@ func (d *Dashboard) updatePodStatuses(ctx context.Context) {
 	for _, pod := range pods.Items {
 		currentPods[pod.Name] = true
 
+		// Extract ReplicaSet ID from pod name (format: name-replicasetid-podid)
+		replicaSetID := ""
+		parts := strings.Split(pod.Name, "-")
+		if len(parts) >= 2 {
+			// Get the second-to-last part as replica set ID
+			replicaSetID = parts[len(parts)-2]
+		}
+
 		podStatus := &PodStatusInfo{
-			Name:      pod.Name,
-			IP:        pod.Status.PodIP,
-			Node:      pod.Spec.NodeName,
-			Status:    string(pod.Status.Phase),
-			LastCheck: time.Now(),
+			Name:         pod.Name,
+			IP:           pod.Status.PodIP,
+			Node:         pod.Spec.NodeName,
+			Status:       string(pod.Status.Phase),
+			LastCheck:    time.Now(),
+			ReplicaSetID: replicaSetID,
 		}
 
 		// Only query running pods with an IP
