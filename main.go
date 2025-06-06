@@ -19,6 +19,13 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// Build variables - set via ldflags
+var (
+	Version   = "dev"
+	GitCommit = "unknown"
+	BuildTime = "unknown"
+)
+
 type PodInfo struct {
 	PodName      string      `json:"podName"`
 	PodIP        string      `json:"podIP"`
@@ -413,7 +420,7 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
                     {{if .Info}}
                     <div class="info-row">
                         <span class="info-label">Container Age</span>
-                        <span class="info-value"><script>document.write(formatDuration({{.Info.ContainerAge}}))</script></span>
+                        <span class="info-value"><script>document.write(formatDuration({{.Info.ContainerAge}} / 1000000))</script></span>
                     </div>
                     <div class="info-row">
                         <span class="info-label">Start Time</span>
@@ -492,6 +499,8 @@ func (d *Dashboard) handleAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	log.Printf("Pod Monitor Dashboard %s (commit: %s, built: %s)", Version, GitCommit, BuildTime)
+
 	dashboard, err := NewDashboard()
 	if err != nil {
 		log.Fatalf("Failed to create dashboard: %v", err)
