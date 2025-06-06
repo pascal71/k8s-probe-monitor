@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +27,11 @@ var (
 	GitCommit = "unknown"
 	BuildTime = "unknown"
 )
+
+func init() {
+	// Log version info at startup
+	log.Printf("Version info - Version: %s, Commit: %s, BuildTime: %s", Version, GitCommit, BuildTime)
+}
 
 type PodInfo struct {
 	PodName      string      `json:"podName"`
@@ -230,9 +236,110 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
         h1 {
             text-align: center;
             color: #ffffff;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             font-size: 2.5em;
             text-shadow: 0 0 20px rgba(100, 200, 255, 0.5);
+        }
+        
+        .version-info {
+            text-align: center;
+            color: #fff;
+            font-size: 1em;
+            margin-bottom: 20px;
+            background: rgba(0, 212, 255, 0.2);
+            border: 2px solid rgba(0, 212, 255, 0.5);
+            border-radius: 25px;
+            padding: 10px 30px;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+        }
+        
+        .version-info span {
+            margin: 0 15px;
+            color: #fff;
+            font-weight: 500;
+        }
+        
+        .controls {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            border: 2px solid rgba(0, 212, 255, 0.3);
+        }
+        
+        .refresh-control {
+            display: inline-flex;
+            align-items: center;
+            gap: 20px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 2px solid rgba(0, 255, 136, 0.5);
+            border-radius: 30px;
+            padding: 15px 30px;
+            box-shadow: 0 6px 25px rgba(0, 255, 136, 0.3);
+        }
+        
+        .refresh-control label {
+            color: #00ff88;
+            font-size: 1.2em;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        
+        .refresh-control input[type="range"] {
+            width: 150px;
+            height: 8px;
+            background: linear-gradient(to right, #444 0%, #666 100%);
+            outline: none;
+            border-radius: 10px;
+            -webkit-appearance: none;
+            cursor: pointer;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .refresh-control input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: radial-gradient(circle, #00ff88 0%, #00d4ff 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+            transition: all 0.2s ease;
+            border: 2px solid #fff;
+        }
+        
+        .refresh-control input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 1);
+        }
+        
+        .refresh-control input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: radial-gradient(circle, #00ff88 0%, #00d4ff 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid #fff;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+            transition: all 0.2s ease;
+        }
+        
+        .refresh-control input[type="range"]::-moz-range-thumb:hover {
+            transform: scale(1.3);
+            box-shadow: 0 0 30px rgba(0, 255, 136, 1);
+        }
+        
+        .refresh-control span {
+            color: #00ff88;
+            font-weight: bold;
+            font-size: 1.1em;
+            min-width: 35px;
+            text-align: center;
         }
         
         .grid {
@@ -282,6 +389,13 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
             word-break: break-all;
         }
         
+        .replica-set-id {
+            font-size: 0.8em;
+            color: #888;
+            margin-top: -10px;
+            margin-bottom: 15px;
+        }
+        
         .info-grid {
             display: grid;
             gap: 10px;
@@ -319,18 +433,34 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
             align-items: center;
             gap: 5px;
             font-size: 0.9em;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 15px;
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+        
+        .probe-indicator:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.05);
+        }
+        
+        .probe-indicator:active {
+            transform: scale(0.95);
         }
         
         .probe-dot {
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background: #444;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
         }
         
         .probe-dot.active {
             background: #00ff88;
-            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.8), inset 0 -2px 4px rgba(0, 0, 0, 0.2);
         }
         
         .error-message {
@@ -379,6 +509,9 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
         }
     </style>
     <script>
+        let refreshInterval = 1000; // Default 1 second
+        let refreshTimer;
+        
         function formatDuration(ms) {
             const seconds = Math.floor(ms / 1000);
             const minutes = Math.floor(seconds / 60);
@@ -395,17 +528,80 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
             return new Date(dateStr).toLocaleString();
         }
         
+        function updateRefreshInterval(value) {
+            refreshInterval = value * 1000;
+            document.getElementById('refresh-value').textContent = value + 's';
+            
+            // Clear existing timer and set new one
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+            }
+            refreshTimer = setInterval(refreshPage, refreshInterval);
+            
+            // Save preference
+            localStorage.setItem('refreshInterval', value);
+        }
+        
         function refreshPage() {
             location.reload();
         }
         
-        // Auto-refresh every 5 seconds
-        setInterval(refreshPage, 5000);
+        async function toggleProbe(podIP, probeType, currentState) {
+            const action = currentState ? 'fail' : 'recover';
+            const url = ` + "`" + `http://${podIP}:8080/api/probes/${probeType}/${action}` + "`" + `;
+            
+            try {
+                // Make the API call through a proxy endpoint on our server
+                const response = await fetch(` + "`" + `/api/proxy` + "`" + `, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        url: url,
+                        method: 'POST'
+                    })
+                });
+                
+                if (response.ok) {
+                    // Refresh the page after a short delay to see the change
+                    setTimeout(refreshPage, 500);
+                } else {
+                    console.error('Failed to toggle probe:', await response.text());
+                }
+            } catch (error) {
+                console.error('Error toggling probe:', error);
+            }
+        }
+        
+        // Initialize on page load
+        window.onload = function() {
+            // Restore saved refresh interval or use default of 1 second
+            const savedInterval = localStorage.getItem('refreshInterval');
+            const defaultInterval = savedInterval || '1';
+            const slider = document.getElementById('refresh-slider');
+            slider.value = defaultInterval;
+            updateRefreshInterval(parseInt(defaultInterval));
+        };
     </script>
 </head>
 <body>
     <div class="container">
         <h1>🚀 Pod Monitor Dashboard</h1>
+        <div class="version-info">
+            <span>Version: {{.Version}}</span>
+            <span>•</span>
+            <span>Commit: {{.GitCommit}}</span>
+            <span>•</span>
+            <span>Built: {{.BuildTime}}</span>
+        </div>
+        <div class="controls">
+            <div class="refresh-control">
+                <label for="refresh-slider">Refresh Interval:</label>
+                <input type="range" id="refresh-slider" min="1" max="10" value="1" onchange="updateRefreshInterval(this.value)">
+                <span id="refresh-value">1s</span>
+            </div>
+        </div>
         <div class="refresh-indicator">🔄</div>
         
         {{if .Pods}}
@@ -413,6 +609,7 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
             {{range .Pods}}
             <div class="pod-card {{if .Error}}error{{else if not .Info.ProbeStatus.Ready}}not-ready{{end}}">
                 <div class="pod-name">{{.Name}}</div>
+                <div class="replica-set-id">ReplicaSet: {{.ReplicaSetID}}</div>
                 
                 <div class="info-grid">
                     <div class="info-row">
@@ -446,15 +643,15 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
                 
                 {{if .Info}}
                 <div class="probe-status">
-                    <div class="probe-indicator">
+                    <div class="probe-indicator" onclick="toggleProbe('{{.IP}}', 'startup', {{.Info.ProbeStatus.Started}})" title="Click to toggle startup probe">
                         <div class="probe-dot {{if .Info.ProbeStatus.Started}}active{{end}}"></div>
                         <span>Started</span>
                     </div>
-                    <div class="probe-indicator">
+                    <div class="probe-indicator" onclick="toggleProbe('{{.IP}}', 'liveness', {{.Info.ProbeStatus.Live}})" title="Click to toggle liveness probe">
                         <div class="probe-dot {{if .Info.ProbeStatus.Live}}active{{end}}"></div>
                         <span>Live</span>
                     </div>
-                    <div class="probe-indicator">
+                    <div class="probe-indicator" onclick="toggleProbe('{{.IP}}', 'readiness', {{.Info.ProbeStatus.Ready}})" title="Click to toggle readiness probe">
                         <div class="probe-dot {{if .Info.ProbeStatus.Ready}}active{{end}}"></div>
                         <span>Ready</span>
                     </div>
@@ -489,11 +686,28 @@ func (d *Dashboard) handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	d.mu.RUnlock()
 
+	// Sort pods by ReplicaSetID, then by Name
+	sort.Slice(pods, func(i, j int) bool {
+		if pods[i].ReplicaSetID == pods[j].ReplicaSetID {
+			return pods[i].Name < pods[j].Name
+		}
+		return pods[i].ReplicaSetID < pods[j].ReplicaSetID
+	})
+
 	data := struct {
-		Pods []*PodStatusInfo
+		Pods      []*PodStatusInfo
+		Version   string
+		GitCommit string
+		BuildTime string
 	}{
-		Pods: pods,
+		Pods:      pods,
+		Version:   Version,
+		GitCommit: GitCommit,
+		BuildTime: BuildTime,
 	}
+
+	// Debug log
+	log.Printf("Rendering template with Version: %s, GitCommit: %s, BuildTime: %s", data.Version, data.GitCommit, data.BuildTime)
 
 	w.Header().Set("Content-Type", "text/html")
 	if err := t.Execute(w, data); err != nil {
@@ -507,6 +721,43 @@ func (d *Dashboard) handleAPI(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(d.pods)
+}
+
+func (d *Dashboard) handleProxy(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	var req struct {
+		URL    string `json:"url"`
+		Method string `json:"method"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
+
+	client := &http.Client{
+		Timeout: 3 * time.Second,
+	}
+
+	proxyReq, err := http.NewRequest(req.Method, req.URL, nil)
+	if err != nil {
+		http.Error(w, "Failed to create request", http.StatusInternalServerError)
+		return
+	}
+
+	resp, err := client.Do(proxyReq)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Failed to call pod API: %v", err), http.StatusInternalServerError)
+		return
+	}
+	defer resp.Body.Close()
+
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
 }
 
 func main() {
@@ -528,6 +779,7 @@ func main() {
 	// Setup HTTP routes
 	http.HandleFunc("/", dashboard.handleIndex)
 	http.HandleFunc("/api/pods", dashboard.handleAPI)
+	http.HandleFunc("/api/proxy", dashboard.handleProxy)
 
 	port := os.Getenv("PORT")
 	if port == "" {
